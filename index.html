@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>輪廻転生</title>
+<meta name="description" content="閻魔さまに1週間の行いを裁いてもらい、来世を決めるゲーム。懺悔と誓いで来世は書き換えられる。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@600;800&family=Zen+Kaku+Gothic+New:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:light dark;--bg:light-dark(#f2f0eb,#121016);--ink:light-dark(#1b1820,#ece8e1);--mut:light-dark(#5f5a68,#a59fac);--panel:light-dark(#fff,#1c1922);--line:light-dark(#d8d3ca,#2f2b37);--shu:#d6402a;--sei:light-dark(#2c7a67,#7fc4ad)}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.7 "Zen Kaku Gothic New",system-ui,sans-serif;overflow-x:clip}
+.band{padding:clamp(24px,4vw,56px) max(5vw,16px)}
+.wrap{max-width:1180px;margin:0 auto}
+h1,h2,.mincho{font-family:"Shippori Mincho B1",serif}
+h1{font-size:clamp(40px,7vw,64px);line-height:1.05;margin:0;font-weight:800;letter-spacing:.08em}
+h2{font-size:24px;line-height:1.3;margin:0 0 12px}
+.lead{color:var(--mut);margin:10px 0 0;max-width:62ch}
+.lead b{color:var(--ink)}
+.stage{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:clamp(20px,4vw,48px);align-items:start;margin-top:24px}
+.wheelbox{position:relative;aspect-ratio:1;max-width:520px;width:100%;margin:0 auto}
+.wheelbox svg{width:100%;height:100%;display:block;overflow:visible}
+#spin{transform-box:fill-box;transform-origin:center;transition:transform 3.4s cubic-bezier(.12,.72,.08,1)}
+#idle{transform-box:fill-box;transform-origin:center}
+@media (prefers-reduced-motion:reduce){#spin{transition:none}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:clamp(18px,3vw,28px)}
+label{display:block;font-weight:700;margin:14px 0 6px}
+label small{font-weight:400;color:var(--mut)}
+textarea,input[type=text]{width:100%;font:16px/1.6 inherit;font-family:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+textarea{min-height:84px;resize:vertical}
+textarea:focus,input:focus,button:focus-visible{outline:3px solid color-mix(in srgb,var(--shu) 55%,transparent);outline-offset:1px}
+.btns{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+button,a.btn{font:700 16px/1 inherit;font-family:inherit;min-height:46px;padding:0 20px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;text-decoration:none}
+button.main{background:var(--shu);border-color:var(--shu);color:#fff}
+button:disabled{opacity:.5;cursor:default}
+button.big{min-height:60px;padding:0 44px;font-size:20px;font-family:"Shippori Mincho B1",serif;letter-spacing:.2em}
+.hint{font-size:14px;color:var(--mut);margin:10px 0 0}
+.status{font-family:"Shippori Mincho B1",serif;font-size:20px;text-align:center;margin:12px 0 0;min-height:1.6em}
+.meter{position:relative;height:14px;border-radius:7px;background:linear-gradient(90deg,#3a2626,#7d5c9e 30%,#8a8590 50%,#3f9a83 75%,#d9b44a);margin:30px 0 8px}
+.meter i{position:absolute;top:-8px;width:4px;height:30px;background:var(--ink);border-radius:2px;transform:translateX(-50%);transition:left 1s}
+.meter span{position:absolute;bottom:22px;transform:translateX(-50%);font-weight:700;white-space:nowrap;transition:left 1s}
+.scale{display:flex;justify-content:space-between;font-size:13px;color:var(--mut)}
+.verdict{font-family:"Shippori Mincho B1",serif;font-size:19px;line-height:1.8;margin:16px 0;padding-left:14px;border-left:3px solid var(--shu)}
+.sv{display:grid;grid-template-columns:auto minmax(0,1fr) 2.5em;gap:6px 10px;align-items:center;font-size:14px;margin-top:12px}
+.bar{height:8px;border-radius:4px;background:var(--line);overflow:hidden}.bar i{display:block;height:100%}
+.probs{margin-top:8px}
+.row{display:grid;grid-template-columns:7.5em minmax(0,1fr) 9.5em;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line);font-size:15px}
+.row .bar{height:10px}
+.row .v{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.row.me{font-weight:700}
+.result{display:grid;grid-template-columns:auto minmax(0,1fr);gap:clamp(16px,3vw,32px);align-items:start}
+.seal{width:clamp(110px,18vw,160px);aspect-ratio:1;border-radius:50%;display:grid;place-items:center;color:#fff;font-family:"Shippori Mincho B1",serif;font-weight:800;text-align:center;line-height:1.1;padding:12px;font-size:clamp(24px,4vw,34px);box-shadow:inset 0 0 0 6px rgba(255,255,255,.18)}
+.realm{font-size:14px;color:var(--mut)}
+.result h2{font-size:clamp(28px,4.5vw,40px);margin:2px 0 4px}
+.life{list-style:none;padding:0;margin:14px 0 0;border-left:2px solid var(--line)}
+.life li{position:relative;padding:4px 0 10px 18px;opacity:0;transform:translateY(6px);transition:.5s}
+.life li.on{opacity:1;transform:none}
+.life li::before{content:"";position:absolute;left:-6px;top:12px;width:10px;height:10px;border-radius:50%;background:var(--sei)}
+.life li.end::before{background:var(--shu)}
+.life li.end{font-weight:700}
+.note{font-size:13px;color:var(--mut);max-width:80ch}
+[hidden]{display:none!important}
+.ref{border:1px solid var(--line);border-radius:12px;padding:0 16px;margin-top:10px;background:var(--panel)}
+.ref summary{min-height:52px;display:flex;align-items:center;cursor:pointer;font-weight:700;font-family:"Shippori Mincho B1",serif;font-size:18px}
+.ref[open]{padding-bottom:16px}
+.fig2{border:1px solid var(--line);border-left:4px solid #c9a33c;border-radius:10px;padding:12px 14px;margin:0 0 14px;background:var(--bg)}
+.fig2 .gp{font-size:12px;color:var(--mut)}
+.fig2 b{font-family:"Shippori Mincho B1",serif;font-size:24px}
+.fig2 p{margin:4px 0 0;font-size:15px}
+.tongue{position:fixed;inset:0;background:rgba(10,4,4,.84);display:grid;place-items:center;z-index:50;padding:16px}
+.tbox{background:#1a0d0d;color:#f3e9c9;border:2px solid var(--shu);border-radius:14px;padding:24px;max-width:480px;width:100%;text-align:center;animation:shake .45s 2}
+.tbox svg{max-width:100%;height:auto}
+.tbox .tt{font-size:clamp(28px,6vw,40px);color:#ff5a3c;margin:6px 0}
+@keyframes shake{0%,100%{transform:none}20%{transform:translateX(-8px) rotate(-1deg)}40%{transform:translateX(8px) rotate(1deg)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+@media (prefers-reduced-motion:reduce){.tbox{animation:none}}
+.warn{border:2px solid var(--shu);border-radius:10px;padding:10px 14px;margin:0 0 14px;text-align:center;font-family:"Shippori Mincho B1",serif;font-weight:800;font-size:19px;line-height:1.6;color:var(--shu);background:color-mix(in srgb,var(--shu) 7%,transparent)}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin:6px 0 4px;overflow-x:auto}
+.tabs button{border:0;border-radius:8px 8px 0 0;background:transparent;min-height:44px;padding:0 14px;font-weight:700;color:var(--mut);white-space:nowrap;flex:none}
+.tabs button[aria-selected=true]{color:var(--ink);box-shadow:inset 0 -3px 0 var(--shu)}
+.kai10{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,170px),1fr));gap:10px;margin-top:8px}
+.kc{border:1px solid var(--line);border-radius:10px;padding:12px 12px 10px;position:relative;background:var(--panel)}
+.kc b{font-family:"Shippori Mincho B1",serif;font-size:26px;font-weight:800;display:block;line-height:1.2;margin-top:2px}
+.kc .yomi{font-size:12px;color:var(--mut)}
+.kc p{margin:4px 0 0;font-size:13px;line-height:1.5}
+.kc .gp{font-size:11px;color:var(--mut)}
+.kc.ha{border-color:var(--shu);background:color-mix(in srgb,var(--shu) 9%,var(--panel))}
+.kc.zen{border-color:var(--sei);background:color-mix(in srgb,var(--sei) 9%,var(--panel))}
+.kc .st{position:absolute;top:10px;right:10px;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-family:"Shippori Mincho B1",serif;font-weight:800;color:#fff;font-size:19px;transform:rotate(-12deg)}
+.kc .dl{font-size:12px;margin-top:6px;padding-top:6px;border-top:1px dashed var(--line)}
+.tg{display:inline-block;font-family:"Shippori Mincho B1",serif;font-size:13px;font-weight:700;border:1px solid currentColor;border-radius:4px;padding:0 6px;margin-right:6px;line-height:1.6}
+.vk{display:flex;gap:18px;align-items:flex-start;margin:18px 0}
+.vk .verdict{margin:0;flex:1}
+.ihai{writing-mode:vertical-rl;flex:none;background:light-dark(#1d1a21,#0b0a0d);color:#f3e9c9;border-radius:10px 10px 4px 4px;padding:18px 12px;min-height:220px;display:flex;align-items:center;gap:10px;box-shadow:inset 0 0 0 2px #b8963c,inset 0 0 0 5px light-dark(#1d1a21,#0b0a0d),inset 0 0 0 6px #b8963c}
+.ihai small{font-size:13px;color:#cdb77a;letter-spacing:.3em}
+.ihai b{font-family:"Shippori Mincho B1",serif;font-weight:800;font-size:clamp(28px,4.5vw,38px);letter-spacing:.12em;line-height:1}
+#rKai{font-family:"Shippori Mincho B1",serif;font-size:clamp(20px,3vw,26px);margin:6px 0 0}
+.q{border-top:1px solid var(--line);padding-top:4px;margin-top:10px}
+.q label{margin-top:10px}
+.q .tag{display:inline-block;font-size:12px;font-weight:700;color:#fff;border-radius:4px;padding:0 6px;margin-right:6px;vertical-align:2px}
+.q textarea{min-height:60px}
+.ladder{margin:0;padding:0;list-style:none;columns:2 300px;column-gap:24px}
+.ladder li{break-inside:avoid;display:grid;grid-template-columns:1.2em minmax(0,1fr) auto;gap:10px;align-items:center;padding:6px 10px;border-radius:8px;font-size:15px}
+.ladder li .dot{width:12px;height:12px;border-radius:50%}
+.ladder li .rg{color:var(--mut);font-size:13px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.ladder li.prev{outline:1px dashed var(--mut)}
+.ladder li.now{background:color-mix(in srgb,var(--shu) 14%,transparent);font-weight:700}
+.vows{list-style:none;padding:0;margin:12px 0 0}
+.vows li{padding:10px 0;border-bottom:1px solid var(--line)}
+.vows li b{color:var(--sei);margin-right:8px;white-space:nowrap;display:inline-block;min-width:2.6em;text-align:right;font-variant-numeric:tabular-nums}
+.vows li p{margin:4px 0 0;font-size:14px;color:var(--mut)}
+.change{font-family:"Shippori Mincho B1",serif;font-size:20px;margin:14px 0 0}
+@media(max-width:760px){.stage{grid-template-columns:minmax(0,1fr)}.wheelbox{max-width:360px}}
+@media(max-width:520px){.row{grid-template-columns:6em minmax(0,1fr)}.row .v{grid-column:1/-1;text-align:left;margin-top:-4px;font-size:13px;color:var(--mut)}.result{grid-template-columns:minmax(0,1fr)}}
+</style>
+</head>
+<body>
+<header class="band" style="padding-bottom:0"><div class="wrap">
+  <h1>輪廻転生</h1>
+  <p class="lead">死んだら、閻魔大王の前で一生を振り返ることになるそうです。その前に、少しだけ予行演習を。思い出した行いから<b>業（カルマ）</b>が定まり、業から<b>来世</b>が決まります。そして、まだ生きているあなたには、来世を書き換える時間が残っています。</p>
+</div></header>
+
+<main class="band"><div class="wrap">
+  <div class="stage">
+    <div>
+      <div class="panel"><h2>業の天秤</h2><p class="hint" id="tenbinHint" style="margin-top:0">閻魔帳を書いて裁いてもらうと、ここにあなたの善行と愚行が＋−で並びます。</p><ol class="vows" id="deeds" style="margin:0"></ol></div>
+      <p class="status mincho" id="status">閻魔さまが、あなたの帳面を待っています。</p>
+      <div class="btns" style="justify-content:center"><button class="main big" id="goBtn" type="button" disabled>転生する</button></div>
+      <div class="kai10" id="kai10" style="margin-top:24px"></div>
+    </div>
+
+    <div class="panel" id="book">
+      <h2>閻魔帳</h2>
+      <form id="form">
+        <p class="warn">閻魔さまが見ています。<br>嘘を書いた者は、舌を抜かれます。</p>
+        <p class="hint" style="margin-top:0">振り返る期間を選んで、その間のことだけを思い出してください。家族、友だち、学校やバイト先、通りすがりの人。小さなことで大丈夫です。</p>
+        <div id="qs"></div>
+        <label for="nm">生前の名前 <small>（任意）</small></label>
+        <input type="text" id="nm" maxlength="30" autocomplete="off">
+        <div class="btns"><button class="main" id="judgeBtn" type="submit">閻魔さまに裁いてもらう</button></div>
+        <p class="hint" id="hint"></p>
+      </form>
+
+      <div id="verdictBox" hidden>
+        <div class="meter"><span id="mLab">±0</span><i id="mPin"></i></div>
+        <div class="scale"><span>地獄 −100</span><span>0</span><span>天 +100</span></div>
+        <div class="vk">
+          <div class="ihai"><small>戒名</small><b id="kaimyo"></b></div>
+          <blockquote class="verdict" id="verdict"></blockquote>
+        </div>
+        <div class="fig2" id="fig"></div>
+        <div class="sv">
+          <span>罪の重さ</span><div class="bar"><i id="sinBar" style="background:var(--shu)"></i></div><span id="sinN"></span>
+          <span>善行の大きさ</span><div class="bar"><i id="goodBar" style="background:var(--sei)"></i></div><span id="goodN"></span>
+        </div>
+        <div class="btns"><button id="redoBtn" type="button">振り返りをやり直す</button></div>
+        <p class="hint" id="src"></p>
+      </div>
+    </div>
+  </div>
+</div></main>
+
+<section class="band" id="resSec" hidden style="padding-top:0"><div class="wrap">
+  <div id="wheelSec" style="max-width:420px;margin:0 auto">
+    <div class="wheelbox">
+      <svg viewBox="-115 -125 230 240" aria-label="六道の輪">
+        <g id="spin"><g id="idle"></g></g>
+        <circle r="33" fill="var(--panel)" stroke="var(--line)"/>
+        <text id="hub" y="9" text-anchor="middle" font-family="Shippori Mincho B1,serif" font-weight="800" font-size="26" fill="var(--ink)">業</text>
+        <path d="M-9 -122 L9 -122 L0 -104 Z" fill="var(--shu)"/>
+      </svg>
+    </div>
+  </div>
+  <p class="status mincho" id="wStat"></p>
+  <div class="panel" id="rCard" style="margin-top:16px">
+    <div class="result">
+      <div class="seal" id="seal"></div>
+      <div>
+        <div class="realm" id="realm"></div>
+        <h2 id="rName"></h2>
+        <div class="realm" id="rProb"></div>
+        <p id="rKai"></p>
+        <ol class="life" id="life"></ol>
+        <p class="verdict" id="moral" style="font-size:17px;margin-top:20px" hidden></p>
+      </div>
+    </div>
+  </div>
+</div></section>
+
+<section class="band" id="vowSec" hidden style="padding-top:0"><div class="wrap panel">
+  <h2>これからの誓い</h2>
+  <p class="lead" style="margin-top:0">あなたはまだ生きています。これから実際にやる善行を書くと、閻魔さまが業に加えてくれます。具体的で、続けられることほど重く量られます。</p>
+  <form id="vowForm">
+    <label for="vow">これからやること</label>
+    <textarea id="vow" maxlength="300" placeholder="例：月に一度は実家の母に電話する"></textarea>
+    <div class="btns"><button class="main" id="vowBtn" type="submit">誓う</button><button id="copyBtn" type="button">結果をコピー</button><button id="cardBtn" type="button">画像カードを作る</button></div>
+  </form>
+  <div id="cardBox" hidden style="margin-top:18px">
+    <img id="cardImg" alt="戒名と来世の画像カード" style="display:block;width:100%;max-width:360px;border-radius:12px;border:1px solid var(--line)">
+    <p class="hint">スマホは画像を長押しで保存できます。保存してSNSでシェアしてください。</p>
+    <div class="btns"><a class="btn" id="saveBtn" download="rinne-tensei.png" href="#">画像を保存</a></div>
+  </div>
+  <p class="change" id="change"></p>
+  <ol class="vows" id="vows"></ol>
+</div></section>
+
+<section class="band" style="padding-top:0"><div class="wrap">
+  <h2>参照</h2>
+  <details class="ref"><summary>業と来世の対応</summary>
+  <p class="hint" style="margin-top:-4px">業がこの範囲に入ると、この来世に決まります。罪と善行がどちらも大きい人は、業が +25 未満なら修羅道へ。「この1週間」「この1年」で振り返ったときは、その期間のあなたのまま一生を送ると考えて、行いの点をそれぞれ3倍・1.5倍にします。</p>
+  <ol class="ladder" id="ladder"></ol>
+  </details>
+  <h2 style="margin-top:36px">もし業が関係なかったら</h2>
+  <p class="hint" style="margin-top:-4px">地球にいる動物の数だけで来世が決まるとしたら、こうなります。</p>
+  <div class="probs" id="base"></div>
+</div></section>
+
+<div id="tongue" class="tongue" hidden role="dialog" aria-modal="true" aria-labelledby="tTitle"><div class="tbox">
+  <svg viewBox="0 0 220 110" width="220" height="110" aria-hidden="true"><ellipse cx="62" cy="60" rx="46" ry="26" fill="#e46f86"/><path d="M30 60 Q62 74 98 58" stroke="#b9455d" stroke-width="3" fill="none"/><path d="M92 40 L210 20 L212 34 L104 52 Z" fill="#2a2a2e"/><path d="M92 80 L210 96 L212 82 L104 68 Z" fill="#2a2a2e"/><circle cx="104" cy="60" r="9" fill="#55555c"/></svg>
+  <h2 class="tt" id="tTitle">嘘を見抜いたぞ</h2>
+  <p class="mincho" id="tReason" style="font-size:18px"></p>
+  <div id="tBtns"><p class="hint" style="color:#cdb7a0">舌を差し出すと、妄語の罪として業が −<span id="tPen">10</span> されます。</p>
+  <div class="btns" style="justify-content:center"><button id="tRedo" type="button">申し開きする（書き直す）</button><button class="main" id="tAccept" type="button">舌を差し出す</button></div></div>
+</div></div>
+
+<footer class="band" style="padding-top:0"><div class="wrap">
+  <p class="note">書いた内容は、閻魔さまの判定のためだけに Google の Gemini API に送られ、このサイトには保存されません。名前や連絡先など、人を特定できることは書かないでください。</p>
+  <p class="note">個体数は研究によって桁が変わる推定値をもとにした、ゲーム用の概算です（動物プランクトン 約10²¹、土壌の線虫 約4.4×10²⁰、その他の昆虫 約10¹⁹、アリ 約2×10¹⁶、魚 約3.5×10¹²、野生の小型哺乳類 約1.3×10¹¹、野鳥 約5×10¹⁰、飼育中のニワトリ 約2.6×10¹⁰、人間 約82億、犬 約9億、猫 約6億、バクテリア 約10³⁰）。人間の生まれる国は年間出生数の割合の概算です。人物の業の点数はゲーム用の目安です。</p>
+</div></footer>
+
+<script>
+{
+// ▼ Cloudflare Workers にデプロイした中継サーバーのURLに書き換える
+const API_URL='https://floral-moon-9e27.7010uno19.workers.dev';
+
+const $=id=>document.getElementById(id);
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+const R=['天','人','修羅','畜生','餓鬼','地獄'];
+const COL=['#c9a33c','#3f9a83','#b8402f','#6a8a36','#7d5c9e','#3a2626'];
+
+// AI（中継サーバー経由）。失敗したら {error} を返す
+async function api(type,payload){
+  if(!API_URL||API_URL.includes('YOUR-')) return {error:'no_api'};
+  try{
+    const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type,...payload})});
+    if(r.status===429) return {error:'rate_limited'};
+    if(!r.ok) return {error:'failed'};
+    const j=await r.json();
+    return j&&j.result?{result:j.result}:{error:'failed'};
+  }catch(e){return {error:'failed'}}
+}
+const whyMsg=e=>e==='rate_limited'?'閻魔さまが混み合っています。少し待ってからもう一度どうぞ。今回は簡易の帳面で判定しました。':'AIの閻魔さまに会えなかったので、簡易の帳面で判定しました。';
+
+const PER={
+ week:{n:'この1週間',f:3,q:[['善','この1週間で、1番よかった行い','例：バイト先で、困っていた新人のシフトを代わった'],['罪','この1週間で、1番よくなかった行い','例：疲れていて、母のLINEを既読無視した'],['両','追加で閻魔さまに申し開くこと（任意）','例：既読無視した母には、次の日に電話した']]},
+ year:{n:'この1年',f:1.5,q:[['善','この1年で、1番よかった行い','例：祖母の引っ越しを丸一日手伝った'],['善','この1年で、2番目によかった行い','例：初めて献血に行った'],['罪','この1年で、1番よくなかった行い','例：友だちとの約束を当日にドタキャンした'],['罪','この1年で、2番目によくなかった行い','例：レポートを友だちに丸写しさせてもらった'],['両','追加で閻魔さまに申し開くこと（任意）','例：ドタキャンした友だちには、翌週ご飯をおごって謝った']]},
+ life:{n:'これまでの人生',f:1,q:[['善','これまでで、1番よかった行い','例：溺れかけた子どもを助けた'],['善','これまでで、2番目によかった行い','例：部活の後輩の悩みを何か月も聞き続けた'],['善','これまでで、3番目によかった行い','例：祖父の介護を家族と交代で続けた'],['罪','これまでで、1番よくなかった行い','例：親にひどいことを言ったまま、謝れていない'],['罪','これまでで、2番目によくなかった行い','例：いじめを見て見ぬふりした'],['罪','これまでで、3番目によくなかった行い','例：借りた漫画を返さないまま引っ越した'],['両','追加で閻魔さまに申し開くこと（任意）','例：見て見ぬふりをした子とは、いまは友だちとして話せている']]}
+};
+let per='week',Q=PER.week.q;
+function drawQ(){
+  Q=PER[per].q;
+  $('qs').innerHTML=`<div class="tabs" role="tablist" aria-label="振り返る期間">${Object.entries(PER).map(([k,p])=>`<button type="button" role="tab" aria-selected="${k===per}" data-p="${k}">${p.n}</button>`).join('')}</div>`+Q.map((q,i)=>`<div class="q"><label for="q${i}"><span class="tag" style="background:${q[0]==='善'?'var(--sei)':q[0]==='罪'?'var(--shu)':'#7a7484'}">${q[0]==='両'?'申し開き':q[0]}</span>${q[1]}</label><textarea id="q${i}" maxlength="300" placeholder="${q[2]}"></textarea></div>`).join('');
+}
+drawQ();
+$('qs').addEventListener('click',e=>{const b=e.target.closest('[data-p]');if(!b||b.dataset.p===per)return;per=b.dataset.p;drawQ()});
+
+const B={
+ 'バクテリア':{sub:['土壌のバクテリア','腸内細菌'],pop:1e30,span:[.01,3],
+  ev:['分裂して生まれた。親はおらず、もうひとりの自分がいた','条件がよく、20分ごとに分裂して増えた','まわりの仲間と化学物質で合図を送り合った'],
+  d:['抗生物質にやられた','アメーバに飲み込まれた','ウイルス（ファージ）に乗っ取られた','乾燥して動けなくなった']},
+ '動物プランクトン':{sub:['カイアシ類','オキアミの幼生'],pop:1e21,span:[7,180],
+  ev:['海を漂う卵から孵った','植物プランクトンを食べて脱皮をくり返した','夜になると、海面近くまで上がった'],
+  d:['イワシの群れに吸い込まれた','クジラのひと飲みに入った','寿命を迎えた']},
+ '線虫':{sub:['土壌の線虫'],pop:4.4e20,span:[3,40],
+  ev:['スプーン1杯の土に何千匹もいる仲間のひとりとして孵化した','バクテリアを食べながら、4回脱皮した','雨で土が湿り、いつもより遠くまで泳げた'],
+  d:['トビムシに食べられた','日照りで土が乾き、干からびた','線虫を捕らえるカビの輪に締めつけられた']},
+ '昆虫':{sub:['ショウジョウバエ','ユスリカ','アブラムシ','コガネムシ','蚊'],pop:1e19,span:[2,60],
+  ev:['卵から幼虫として生まれた','ひたすら食べ続け、体が何倍にもなった','さなぎを経て、羽化した','初めて空を飛んだ'],
+  d:['クモの巣にかかった','鳥についばまれた','人間の手にたたかれた','夜の街灯のまわりを飛び続け、力尽きた','冬が来た']},
+ 'アリ':{sub:['働きアリ'],pop:2e16,span:[30,365],
+  ev:['女王から生まれた何万匹もの姉妹のひとりになった','においの道をたどって餌を運んだ','巣の修理を担当した','仲間に餌を口移しで分けた'],
+  d:['大雨で巣が水没した','クモに捕まった','隣の巣との戦争で倒れた','寿命を迎えた']},
+ '魚':{sub:['カタクチイワシ','マイワシ','サバ','タラ'],pop:3.5e12,span:[2,1500],
+  ev:['海にばらまかれた数万個の卵のひとつから孵った','プランクトンを食べて、群れに加わった','群れで一斉に向きを変える技を覚えた'],
+  d:['大きな魚に群れごと追い込まれた','漁船の網に入った','寿命を迎えた']},
+ 'ニワトリ':{sub:['肉用のニワトリ'],pop:2.6e10,span:[40,56],
+  ev:['孵卵器の中で生まれ、母鳥の顔は知らない','数万羽の仲間と同じ鶏舎で育った','約6週間で体重が50倍近くになった'],
+  d:['出荷され、食肉になった']},
+ '野ネズミ':{sub:['ハツカネズミ','ドブネズミ','トガリネズミ','コウモリ'],pop:1.3e11,span:[60,900],
+  ev:['目も開かない姿で生まれた','夜の間、種や虫を探して走り回った','子どもを産み、育てた'],
+  d:['フクロウに捕まった','冬の寒さを越せなかった','寿命を迎えた']},
+ '野鳥':{sub:['スズメ','ムクドリ','ツバメ','ハシブトガラス'],pop:5e10,span:[30,2000],
+  ev:['巣立ちの日、初めて空を飛んだ','群れで季節の移動をした','つがいになり、ヒナを育てた'],
+  d:['最初の冬を越せなかった','ネコに捕まった','窓ガラスにぶつかった','寿命を迎えた']},
+ '猫':{sub:['飼い猫','地域猫'],pop:6e8,span:[300,6000],
+  ev:['きょうだいの中でいちばん小さく生まれた','日だまりで1日の大半を寝て過ごした','ネズミを捕まえて自慢げに見せた'],
+  d:['老衰で眠るように亡くなった','病気で亡くなった']},
+ '犬':{sub:['飼い犬'],pop:9e8,span:[300,5800],
+  ev:['きょうだいと身を寄せ合って生まれた','人間の言葉をいくつか覚えた','毎日の散歩がいちばんの楽しみになった'],
+  d:['家族に見守られ、老衰で亡くなった','病気で亡くなった']},
+ '人間':{pop:8.2e9}
+};
+const LAD=[['天',90,0],['人間',25,1],['犬',21,3],['猫',17,3],['野鳥',13,3],['野ネズミ',10,3],['ニワトリ',7,3],['魚',4,3],['アリ',1,3],['昆虫',-9,3],['線虫',-29,3],['動物プランクトン',-49,3],['バクテリア',-69,3],['餓鬼',-89,4],['地獄',-100,5]];
+const C=[['インド',17,72,.03],['中国',7,78,.006],['ナイジェリア',6,54,.1],['パキスタン',4.8,67,.06],['インドネシア',3.3,71,.02],['コンゴ民主共和国',3.3,61,.08],['エチオピア',3,66,.05],['アメリカ',2.7,79,.006],['バングラデシュ',2.2,73,.03],['ブラジル',1.9,76,.013],['日本',.55,84,.002],['その他の国',48.25,72,.03]];
+const SP={
+ '天':{n:'天人',realm:'天道',ev:['六欲天のひとつ、四王天に生まれた','花の香りと音楽に満ちた日々を過ごした','天の寿命は長いが、終わりは必ず来ると知った'],d:'天人五衰。頭の花がしおれ、ふたたび輪廻の輪へ（天の暦で500年）'},
+ '修羅':{n:'阿修羅',realm:'修羅道',ev:['戦いの絶えない世界に生まれた','正しさにこだわるほど、敵が増えた','善も悪も抱えたまま、剣を握り続けた'],d:'戦いの果てに倒れ、また輪廻の輪へ'},
+ '餓鬼':{n:'餓鬼',realm:'餓鬼道',ev:['腹は山のように大きく、喉は針の穴ほどに細い体で生まれた','食べ物を口に運ぶと、炎に変わった','満たされない日々が続いた'],d:'飢えの業が尽きるまで、ここにいる'},
+ '地獄':{n:'地獄の亡者',realm:'地獄道',ev:['八大地獄のひとつ、等活地獄に落とされた','獄卒に打たれては、涼しい風で生き返らされた','同じ苦しみを何度もくり返した'],d:'刑期はおよそ1兆6653億年と伝えられる'}
+};
+function odds(p){
+  if(p>=.01) return (p*100).toFixed(p>=.1?0:1)+'%';
+  const x=1/p;
+  if(x>=1e16) return '約10の'+Math.round(Math.log10(x))+'乗分の1';
+  if(x>=1e12) return '約'+Math.round(x/1e12).toLocaleString()+'兆分の1';
+  if(x>=1e8) return '約'+Math.round(x/1e8).toLocaleString()+'億分の1';
+  if(x>=1e4) return '約'+Math.round(x/1e4).toLocaleString()+'万分の1';
+  return '約'+Math.round(x).toLocaleString()+'分の1';
+}
+// 業なしの確率（動物のみ）
+{
+  const an=Object.entries(B).filter(([k])=>k!=='バクテリア'),tot=an.reduce((a,[,b])=>a+b.pop,0);
+  const rows=an.map(([k,b])=>({k,p:b.pop/tot})).sort((a,b)=>b.p-a.p);
+  const lmax=Math.log10(rows[0].p);
+  $('base').innerHTML=rows.map(o=>`<div class="row${o.k==='人間'?' me':''}"><span>${o.k}</span><div class="bar"><i style="width:${Math.max(1.5,100*(1-(lmax-Math.log10(o.p))/13))}%;background:${o.k==='人間'?COL[1]:COL[3]}"></i></div><span class="v">${odds(o.p)}</span></div>`).join('')+
+  `<p class="hint">棒の長さは対数目盛り（1目盛り＝10倍）。バクテリアまで数に入れると、人間に生まれる確率は${odds(8.2e9/(tot+1e30))}になります。</p>`;
+}
+// 輪
+{
+  const pt=(r,a)=>[(r*Math.sin(a*Math.PI/180)).toFixed(2),(-r*Math.cos(a*Math.PI/180)).toFixed(2)];
+  let h='';
+  R.forEach((r,i)=>{
+    const [x0,y0]=pt(100,i*60-30),[x1,y1]=pt(100,i*60+30),[x2,y2]=pt(36,i*60+30),[x3,y3]=pt(36,i*60-30);
+    h+=`<path d="M${x0} ${y0} A100 100 0 0 1 ${x1} ${y1} L${x2} ${y2} A36 36 0 0 0 ${x3} ${y3}Z" fill="${COL[i]}" stroke="var(--bg)" stroke-width="2"/>`;
+    const [lx,ly]=pt(70,i*60),la=i*60>90&&i*60<270?i*60+180:i*60;
+    h+=`<text x="${lx}" y="${ly}" transform="rotate(${la} ${lx} ${ly})" text-anchor="middle" dominant-baseline="central" font-family="Shippori Mincho B1,serif" font-weight="800" font-size="${r.length>1?19:24}" fill="#fff">${r}</text>`;
+  });
+  for(let i=0;i<24;i++){const[a,b]=pt(103,i*15),[c,d]=pt(108,i*15);h+=`<line x1="${a}" y1="${b}" x2="${c}" y2="${d}" stroke="var(--mut)" stroke-width="1.5"/>`}
+  $('idle').innerHTML=h;
+}
+let rot=-60;$('spin').style.transform='rotate(-60deg)';
+function spinTo(i){
+  return new Promise(res=>{
+    const cur=((rot%360)+360)%360,target=((-i*60)%360+360)%360;
+    rot+=360*4+((target-cur+360)%360)+(Math.random()*30-15);
+    $('spin').style.transform=`rotate(${rot}deg)`;
+    setTimeout(res,matchMedia('(prefers-reduced-motion: reduce)').matches?150:3500);
+  });
+}
+
+const BAD=['殺','盗','万引','暴力','殴','いじめ','虐','裏切','浮気','不倫','詐','嘘','騙','脅','壊','捨て','無視','悪口','ポイ捨て','謝れて'];
+const GOOD=['助け','救','寄付','献血','ボランティア','守','看病','介護','育て','譲','拾','届け','救急','支え','励ま','教え','ドナー','手伝','里親','電話'];
+const cnt=(t,l)=>l.reduce((a,w)=>a+(t.includes(w)?1:0),0);
+
+let K=null,vows=[],lastKey=null,last=null;
+const score=()=>clamp(K.score+vows.reduce((a,v)=>a+v.bonus,0),-100,100);
+function fate(s){
+  if(K.sin>=8&&K.virtue>=8&&s<25) return {key:'修羅',ri:2};
+  const l=LAD.find(x=>s>=x[1]);return {key:l[0],ri:l[2]};
+}
+
+$('form').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const ans=Q.map((q,i)=>$('q'+i).value.trim()),nm=$('nm').value.trim();
+  if(!ans.some(Boolean)){$('hint').textContent='ひとつだけでも書いてみてください。閻魔さまは白紙を裁けません。';return}
+  $('judgeBtn').disabled=true;$('hint').textContent='';
+  $('status').textContent='閻魔さまが閻魔帳をめくり、あなたの落ちる先を見定めています…';
+  const res=await api('judge',{per,name:nm,items:Q.map((q,i)=>({kind:q[0],label:q[1],text:ans[i]}))});
+  const r=res.result;
+  let why='';
+  const dd=r&&Array.isArray(r.deeds)?r.deeds.filter(d=>d&&Number.isFinite(+d.points)).map(d=>({text:String(d.text||''),points:clamp(Math.round(+d.points),-100,100),tag:String(d.tag||'').trim()})):null;
+  if(dd&&dd.length){
+    dd.forEach(d=>d.points=Math.round(d.points*PER[per].f));
+    const pos=dd.reduce((a,d)=>a+Math.max(0,d.points),0),neg=dd.reduce((a,d)=>a-Math.min(0,d.points),0);
+    K={score:clamp(pos-neg,-100,100),sin:clamp(Math.round(neg/6),neg?1:0,10),virtue:clamp(Math.round(pos/6),pos?1:0,10),deeds:dd,verdict:String(r.verdict||''),kaimyo:String(r.kaimyo||''),uso:{level:clamp(Math.round(+(r.uso&&r.uso.level)||0),0,3),reason:String((r.uso&&r.uso.reason)||'')}};
+  }else{
+    const sinT=Q.map((q,i)=>q[0]!=='善'?ans[i]:'').join(''),goodT=Q.map((q,i)=>q[0]!=='罪'?ans[i]:'').join('');
+    const sv=Math.min(10,1+cnt(sinT,BAD)*2),gv=Math.min(10,1+cnt(goodT,GOOD)*2+(ans[0]?1:0));
+    const sc=clamp(Math.round((gv-sv)*10),-100,100);
+    K={score:sc,sin:sv,virtue:gv,kaimyo:'釈自省居士',verdict:sc>30?'ふむ、帳面を見るかぎり、なかなかの善人である。':sc<-30?'罪の重さが善行を上回っておる。だが、お主はまだ生きておる。':'善もあれば悪もある。まことに人間らしい一生であったな。'};
+    why=whyMsg(res.error);
+  }
+  K.per=per;vows=[];lastKey=null;
+  $('judgeBtn').disabled=false;
+  if(K.uso&&K.uso.level>=2) showTongue(why); else showVerdict(why);
+});
+
+function showTongue(why){
+  const p=K.uso.level>=3?20:10;
+  $('tTitle').textContent='嘘を見抜いたぞ';
+  $('tReason').textContent='「'+(K.uso.reason||'その閻魔帳、盛っておるな。')+'」';
+  $('tPen').textContent=p;$('tBtns').hidden=false;
+  $('tongue').hidden=false;
+  $('tAccept').onclick=()=>{
+    $('tBtns').hidden=true;$('tTitle').textContent='ぶちっ。';$('tReason').textContent='舌を抜かれた。妄語の罪が閻魔帳に記された。';
+    setTimeout(()=>{
+      K.deeds=K.deeds||[];K.deeds.push({text:'閻魔帳に嘘を書き、舌を抜かれた',points:-p,tag:'妄語'});
+      K.score=clamp(K.score-p,-100,100);K.sin=clamp(K.sin+Math.max(1,Math.round(p/6)),0,10);
+      K.verdict=(K.verdict||'')+'　舌は抜いておいた。来世では正直に生きるがよい。';
+      $('tongue').hidden=true;showVerdict(why);
+    },1400);
+  };
+  $('tRedo').onclick=()=>{$('tongue').hidden=true;$('form').hidden=false;$('verdictBox').hidden=true;$('status').textContent='正直に書き直すがよい。';$('book').scrollIntoView({behavior:'smooth'})};
+}
+const FIG=[
+ ['杉原千畝','昭和の外交官',85,'第二次世界大戦中、リトアニアで日本通過のビザを書き続け、多くのユダヤ人難民の命を救った。'],
+ ['ナイチンゲール','19世紀イギリスの看護師',78,'クリミア戦争の野戦病院で、看護と衛生の改革に力を尽くした。'],
+ ['行基','奈良時代の僧',70,'各地で橋や池、旅人の休む施設をつくり、民衆を助けて歩いた。'],
+ ['空也','平安時代の僧',60,'都で念仏を広め、井戸を掘り、道ばたに捨て置かれた亡骸を弔った。'],
+ ['二宮尊徳','江戸時代後期の農政家',48,'荒れはてた村々を、勤勉と倹約の教えで立て直した。'],
+ ['良寛','江戸時代後期の僧',32,'托鉢で質素に暮らし、子どもたちと手まりをついて遊んだと伝わる。'],
+ ['ごん','新美南吉『ごんぎつね』',20,'いたずらを悔い、毎日こっそり、くりやまつたけを届け続けた。'],
+ ['宮沢賢治','大正〜昭和の詩人・童話作家',18,'農民のために、肥料の相談を無償で引き受けて回った。'],
+ ['金子みすゞ','大正〜昭和の童謡詩人',16,'詩「大漁」で、浜がにぎわう陰でとむらいをする海の中の魚たちを思った。'],
+ ['メロス','太宰治『走れメロス』',14,'友を人質に残してしまったが、約束を守るために走り抜いた。'],
+ ['笠地蔵のおじいさん','昔話',12,'売れ残った笠を、雪をかぶったお地蔵さまにかぶせてあげた。'],
+ ['小林一茶','江戸時代後期の俳人',10,'「やせ蛙まけるな一茶これにあり」と、小さな生き物に心を寄せた。'],
+ ['花咲かじいさん','昔話',8,'飼い犬のシロをかわいがり、灰をまいて枯れ木に花を咲かせた。'],
+ ['野口英世','明治〜昭和の細菌学者',6,'浪費や借金でも知られたが、黄熱病などの研究に身をささげた。'],
+ ['一休宗純','室町時代の禅僧',4,'酒を飲み、型破りなふるまいで知られたが、人々に慕われた。'],
+ ['ジョージ・ワシントン','アメリカ初代大統領',2,'少年時代、父の桜の木を切ったことを正直に打ち明けた、という逸話で知られる（後世の作り話とも言われる）。'],
+ ['三年寝太郎','昔話',0,'三年のあいだ寝てばかりいたが、最後に村の田んぼへ水を引いた。'],
+ ['石川啄木','明治の歌人',-2,'友人たちから借金を重ねたが、心に残る短歌を数多く残した。'],
+ ['彦星','七夕の伝説',-4,'織姫と結婚したあと、牛飼いの仕事を怠けてしまった。'],
+ ['キリギリス','イソップ寓話',-6,'夏のあいだ歌って遊び、冬の備えをしなかった。'],
+ ['鶴を助けた男','昔話「鶴の恩返し」',-8,'のぞかないでと頼まれたのに、機を織る部屋をのぞいてしまった。'],
+ ['浦島太郎','昔話',-10,'開けてはいけないと言われた玉手箱を開けてしまった。'],
+ ['ねずみ小僧','江戸時代後期の盗賊',-22,'大名屋敷から盗み、貧しい人に配った義賊として語り継がれるが、実際は遊びに使ったとも言われる。'],
+ ['石川五右衛門','安土桃山時代の盗賊',-55,'天下の大泥棒として名を残し、京で釜ゆでの刑に処されたと伝わる。'],
+ ['カンダタ','芥川龍之介『蜘蛛の糸』',-78,'人を殺し、家に火をつけた大泥棒。ただ一度だけ、小さな蜘蛛を踏み殺さずに助けた。'],
+ ['アングリマーラ','仏典に登場する人物',-95,'多くの人を殺めたが、釈迦に出会って懺悔し、出家して修行者として生き直した。']
+];
+function drawFig(s){
+  const f=FIG.reduce((a,b)=>Math.abs(b[2]-s)<Math.abs(a[2]-s)?b:a);
+  $('fig').innerHTML=`<span class="gp">あなたの業（${s>0?'+':''}${s}）にいちばん近い人物</span><div><b>${f[0]}</b>　<span class="hint">${f[1]}・業の目安 ${f[2]>0?'+':''}${f[2]}</span></div><p>${f[3]}</p>`;
+}
+function showVerdict(why){
+  $('form').hidden=true;$('verdictBox').hidden=false;$('resSec').hidden=true;$('vowSec').hidden=true;
+  const pos=(K.score+100)/2+'%';
+  $('mPin').style.left=pos;$('mLab').style.left=pos;$('mLab').textContent=(K.score>0?'+':K.score<0?'−':'±')+Math.abs(K.score);
+  $('verdict').textContent='「'+K.verdict+'」';
+  $('deeds').innerHTML=(K.deeds||[]).map(d=>`<li><b style="color:${d.points<0?'var(--shu)':'var(--sei)'}">${d.points>0?'+':''}${d.points}</b>${d.tag?`<span class="tg" style="color:${d.points<0?'var(--shu)':'var(--sei)'}">${esc(d.tag)}</span>`:''}${esc(d.text)}</li>`).join('');
+  $('kaimyo').textContent=K.kaimyo||'—';drawKai(K.deeds||[]);drawFig(K.score);$('tenbinHint').hidden=true;
+  $('sinBar').style.width=K.sin*10+'%';$('sinN').textContent=K.sin;
+  $('goodBar').style.width=K.virtue*10+'%';$('goodN').textContent=K.virtue;
+  $('src').textContent=why;$('hub').textContent=(K.score>0?'+':'')+K.score;
+  $('status').textContent='業が定まりました。「転生する」で、六道の輪が回ります。';$('goBtn').disabled=false;drawLadder(null,null);
+  $('vows').innerHTML='';$('change').textContent='';
+}
+
+function age(days){
+  if(days<1/24) return Math.max(1,Math.round(days*1440))+'分';
+  if(days<1) return Math.round(days*24)+'時間';
+  if(days<60) return Math.round(days)+'日';
+  if(days<730) return Math.round(days/30)+'か月';
+  return Math.floor(days/365)+'歳';
+}
+function live(key){
+  const L=[];let name,realm,seal,col,end,summary;
+  if(SP[key]){
+    const s=SP[key];name=s.n;realm=s.realm;seal=key;col=COL[R.indexOf(key)];L.push(...s.ev);end=s.d;summary=s.n;
+  }else if(key==='人間'){
+    let x=Math.random()*100,c=C[C.length-1];
+    for(const e of C){if((x-=e[1])<0){c=e;break}}
+    name='人間';realm='人間道';seal='人';col=COL[1];
+    L.push(`${c[0]}に生まれた（この国に生まれる確率 約${c[1]}%）`);
+    if(Math.random()<c[3]){L.push('家族に大切に抱かれて育った');end=`${1+Math.floor(Math.random()*4)}歳。病気で、5歳を待たずに亡くなった`}
+    else{
+      const ev=['初めて自分の足で歩いた','学校に通い、友だちができた','恋をした','働いて家族を支えた','子どもが生まれた','遠くの町へ旅をした','大きな病気を乗り越えた','誰かの命を救う手伝いをした'];
+      L.push(...[...ev].sort(()=>Math.random()-.5).slice(0,3));
+      const a=clamp(Math.round(c[2]+(Math.random()+Math.random()+Math.random()-1.5)*16),6,105);
+      end=`享年${a}歳。${a>=c[2]?'家族に見守られて亡くなった':pick(['病気で亡くなった','事故で亡くなった'])}`;
+    }
+    summary=`人間（${c[0]}）`;
+  }else{
+    const b=B[key],sub=pick(b.sub),[mn,mx]=b.span,r=Math.random(),days=mn+(mx-mn)*r*r;
+    name=sub;realm='畜生道';seal=key.length>4?key.slice(-4):key;col=COL[3];
+    L.push(...[...b.ev].sort(()=>Math.random()-.5).slice(0,days<mn+(mx-mn)*.15?1:3));
+    end=`享年${age(days)}。${pick(b.d)}`;summary=sub;
+  }
+  return {name,realm,seal,col,L,end,summary};
+}
+const KAI=[['殺生','ふせっしょう','生き物の命を奪わない'],['偸盗','ふちゅうとう','人のものを盗まない'],['邪淫','ふじゃいん','道に外れた関係を持たない'],['妄語','ふもうご','嘘をつかない'],['両舌','ふりょうぜつ','二枚舌で人の仲を裂かない'],['悪口','ふあっく','人を傷つける言葉を使わない'],['綺語','ふきご','飾っただけの中身のない言葉を言わない'],['貪欲','ふとんよく','むさぼらない'],['瞋恚','ふしんに','怒り、恨まない'],['邪見','ふじゃけん','因果の道理を軽んじない'],['飲酒','ふおんじゅ','酒に溺れない']];
+const VIR={'布施':['ふせ','人に施し、分け与えること'],'慈悲':['じひ','人の苦しみを除き、楽を与えること'],'孝養':['こうよう','親を大切にし、養うこと'],'忍辱':['にんにく','侮辱や苦しみを耐え忍ぶこと'],'精進':['しょうじん','善い行いに励み続けること']};
+function drawKai(dd){
+  const g=dd.filter(d=>d.points>0).sort((a,b)=>b.points-a.points)[0],b=dd.filter(d=>d.points<0).sort((a,b)=>a.points-b.points)[0];
+  const card=(d,good)=>{
+    const t=d.tag.replace(/^不/,''),k=KAI.find(x=>x[0]===t),v=VIR[d.tag];
+    const term=k?'不'+k[0]:v?d.tag:(d.tag||(good?'善行':'愚行')),yomi=k?k[1]:v?v[0]:'',mean=k?(good?k[2]+'。その戒を行いで示した':k[2]+'。その戒を破った'):v?v[1]:'';
+    return `<div class="kc ${good?'zen':'ha'}"><span class="st" style="background:${good?'var(--sei)':'var(--shu)'}">${good?'善':'破'}</span><span class="gp">${good?'いちばんの善行':'いちばんの愚行'}</span><b>${esc(term)}</b><span class="yomi">${yomi}</span><p>${mean}</p><div class="dl"><strong>${d.points>0?'+':''}${d.points}</strong>　${esc(d.text)}</div></div>`;
+  };
+  $('kai10').innerHTML=(g?card(g,true):'')+(b?card(b,false):'');
+}
+function drawLadder(prev,now){
+  $('ladder').innerHTML=LAD.map((l,i)=>{
+    const hi=i?LAD[i-1][1]-1:100,rg=l[1]===hi?`${l[1]>0?'+':''}${l[1]}`:`${l[1]>0?'+':''}${l[1]} 〜 ${hi>0?'+':''}${hi}`;
+    const cls=l[0]===now?'now':l[0]===prev?'prev':'';
+    return `<li class="${cls}"><span class="dot" style="background:${COL[l[2]]}"></span><span>${l[0]}${cls==='now'?'　← あなた':cls==='prev'?'　（前の来世）':''}</span><span class="rg">${rg}</span></li>`}).join('');
+}
+async function reincarnate(){
+  $('goBtn').disabled=$('vowBtn').disabled=true;
+  const s=score(),f=fate(s),prev=lastKey;drawFig(s);
+  $('hub').textContent=(s>0?'+':'')+s;
+  $('status').textContent='輪が回っています…';$('wStat').textContent='六道の輪が回っています…';
+  $('resSec').hidden=false;$('rCard').style.visibility='hidden';$('wheelSec').scrollIntoView({behavior:'smooth',block:'center'});
+  await spinTo(f.ri);
+  $('rCard').style.visibility='visible';
+  const r=live(f.key);last={r,s};lastKey=f.key;
+  $('status').textContent=`${R[f.ri]}の道へ。`;$('wStat').textContent=`${R[f.ri]}の道へ。`;
+  $('seal').textContent=r.seal;$('seal').style.background=r.col;
+  $('realm').textContent=r.realm+'に転生';$('rName').textContent=r.name;$('rKai').textContent=K.kaimyo?'前世の戒名　'+K.kaimyo:'';
+  const bp=B[f.key]?B[f.key].pop:null;
+  $('rProb').textContent=`${PER[K.per].n}のあなたのまま一生を送ったら　｜　業 ${s>0?'+':''}${s}`+(bp?`　｜　業が関係なければ、この生き物に生まれる確率は${odds(bp/1.46e21)}`:'');
+  $('life').innerHTML=r.L.map(t=>`<li>${esc(t)}</li>`).join('')+`<li class="end">${esc(r.end)}</li>`;
+  $('moral').hidden=f.key!=='人間';
+  $('moral').textContent='人身受け難し、いますでに受く。——何十億分の一の一生を、もう一度。';
+  drawLadder(prev&&prev!==f.key?prev:null,f.key);
+  $('vowSec').hidden=false;
+  [...$('life').children].forEach((li,i)=>setTimeout(()=>li.classList.add('on'),250+i*600));
+  if(prev&&prev!==f.key) $('change').textContent=`来世が「${prev}」から「${f.key}」に変わりました。`;
+  else if(prev) $('change').textContent='まだ来世は変わりません。次の段まで、あと少し。';
+  $('goBtn').disabled=$('vowBtn').disabled=false;
+}
+$('goBtn').addEventListener('click',reincarnate);
+drawLadder(null,null);drawKai([]);
+$('redoBtn').addEventListener('click',()=>{$('goBtn').disabled=true;drawKai([]);$('deeds').innerHTML='';$('tenbinHint').hidden=false;drawLadder(null,null);$('form').hidden=false;$('verdictBox').hidden=true;$('resSec').hidden=true;$('vowSec').hidden=true;$('hub').textContent='業';$('status').textContent='閻魔さまが、あなたの帳面を待っています。'});
+
+$('vowForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const t=$('vow').value.trim();if(!t)return;
+  $('vowBtn').disabled=true;$('change').textContent='閻魔さまが誓いを量っています…';
+  const res=await api('vow',{prev:vows.map(v=>v.text),text:t}),r=res.result;
+  let v;
+  if(r&&Number.isFinite(+r.bonus)) v={text:t,bonus:clamp(Math.round(+r.bonus),0,15),comment:String(r.comment||''),tag:String(r.tag||'').trim()};
+  else v={text:t,bonus:clamp(2+cnt(t,GOOD)*3+(t.length>25?1:0),0,12),comment:'誓いは書いた時ではなく、果たした時に業となる。忘れるでないぞ。'};
+  vows.unshift(v);$('vow').value='';
+  $('vows').innerHTML=vows.map(x=>`<li><b>+${x.bonus}</b>${x.tag?`<span class="tg" style="color:var(--sei)">${esc(x.tag)}の誓い</span>`:''}${esc(x.text)}<p>${esc(x.comment)}</p></li>`).join('');
+  await reincarnate();
+});
+
+// 画像カード
+function rr(x,a,b,w,h,r){x.beginPath();x.moveTo(a+r,b);x.arcTo(a+w,b,a+w,b+h,r);x.arcTo(a+w,b+h,a,b+h,r);x.arcTo(a,b+h,a,b,r);x.arcTo(a,b,a+w,b,r);x.closePath()}
+function wrapJ(x,t,w){const ls=[];let c='';for(const ch of t){if(x.measureText(c+ch).width>w){ls.push(c);c=ch}else c+=ch}if(c)ls.push(c);return ls}
+async function makeCard(){
+  if(!last)return null;
+  try{await Promise.all([document.fonts.load('800 80px "Shippori Mincho B1"'),document.fonts.load('400 30px "Zen Kaku Gothic New"')])}catch(e){}
+  const W=1080,H=1350,c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');
+  const M='"Shippori Mincho B1",serif',G='"Zen Kaku Gothic New",sans-serif';
+  x.fillStyle='#121016';x.fillRect(0,0,W,H);
+  x.textAlign='center';x.fillStyle='#ece8e1';x.font=`800 72px ${M}`;x.fillText('輪 廻 転 生',W/2,120);
+  x.fillStyle='#a59fac';x.font=`400 30px ${G}`;x.fillText(`${PER[K.per||'week'].n}のあなたのまま一生を送ったら`,W/2,175);
+  const ix=110,iy=230,iw=230,ih=800;
+  x.fillStyle='#0b0a0d';rr(x,ix,iy,iw,ih,18);x.fill();
+  x.strokeStyle='#b8963c';x.lineWidth=4;rr(x,ix+10,iy+10,iw-20,ih-20,12);x.stroke();
+  x.fillStyle='#cdb77a';x.font=`400 28px ${G}`;['戒','名'].forEach((ch,i)=>x.fillText(ch,ix+iw/2,iy+75+i*36));
+  const km=[...(K.kaimyo||'無名居士')],fs=Math.min(84,Math.floor((ih-200)/km.length)-6);
+  x.fillStyle='#f3e9c9';x.font=`800 ${fs}px ${M}`;km.forEach((ch,i)=>x.fillText(ch,ix+iw/2,iy+160+fs+i*(fs+6)));
+  const cx=710;
+  x.fillStyle='#a59fac';x.font=`400 34px ${G}`;x.fillText('来世は',cx,290);
+  x.fillStyle=last.r.col;x.beginPath();x.arc(cx,470,150,0,Math.PI*2);x.fill();
+  x.strokeStyle='rgba(255,255,255,.22)';x.lineWidth=10;x.beginPath();x.arc(cx,470,136,0,Math.PI*2);x.stroke();
+  const sl=last.r.seal;x.fillStyle='#fff';x.font=`800 ${sl.length>2?60:96}px ${M}`;x.textBaseline='middle';x.fillText(sl,cx,476);x.textBaseline='alphabetic';
+  x.fillStyle='#ece8e1';x.font=`800 ${last.r.name.length>6?50:68}px ${M}`;x.fillText(last.r.name,cx,710);
+  x.fillStyle='#a59fac';x.font=`400 32px ${G}`;x.fillText(last.r.realm+'に転生',cx,765);
+  x.fillStyle='#ff6a4d';x.font=`800 56px ${M}`;x.fillText(`業 ${last.s>0?'+':''}${last.s}`,cx,870);
+  const dd=K.deeds||[],g=dd.filter(d=>d.points>0).sort((a,b)=>b.points-a.points)[0],bd=dd.filter(d=>d.points<0).sort((a,b)=>a.points-b.points)[0];
+  x.textAlign='left';let y=1100;
+  for(const [d,lab,col] of [[g,'いちばんの善行','#7fc4ad'],[bd,'いちばんの愚行','#ff6a4d']]){
+    if(!d)continue;
+    x.fillStyle=col;x.font=`800 30px ${M}`;x.fillText(lab+(d.tag?'〔'+d.tag+'〕':''),110,y);
+    x.fillStyle='#ece8e1';x.font=`400 30px ${G}`;const ls=wrapJ(x,`${d.points>0?'+':''}${d.points}　${d.text}`,860);
+    x.fillText(ls.length>1?ls[0].slice(0,-1)+'…':ls[0]||'',110,y+42);y+=100;
+  }
+  x.textAlign='center';x.fillStyle='#6f6878';x.font=`400 24px ${G}`;x.fillText('閻魔さまに裁いてもらう ── 輪廻転生',W/2,1315);
+  return new Promise(res=>c.toBlob(res,'image/png'));
+}
+let cardUrl=null;
+$('cardBtn').addEventListener('click',async()=>{
+  $('cardBtn').disabled=true;
+  let blob=null;try{blob=await makeCard()}catch(e){}
+  if(blob){if(cardUrl)URL.revokeObjectURL(cardUrl);cardUrl=URL.createObjectURL(blob);$('cardImg').src=cardUrl;$('saveBtn').href=cardUrl;$('cardBox').hidden=false}
+  $('cardBtn').disabled=false;
+});
+$('copyBtn').addEventListener('click',async()=>{
+  if(!last)return;
+  const t=`輪廻転生｜業 ${last.s>0?'+':''}${last.s}（戒名：${K.kaimyo}）→ 来世は「${last.r.summary}」。${last.r.end}\n${location.href}`+(vows.length?`\nこれからの誓い：${vows.map(v=>v.text).join('／')}`:'');
+  try{await navigator.clipboard.writeText(t);$('copyBtn').textContent='コピーしました'}catch(e){$('copyBtn').textContent='コピーできませんでした'}
+  setTimeout(()=>$('copyBtn').textContent='結果をコピー',1800);
+});
+}
+</script>
+</body>
+</html>
