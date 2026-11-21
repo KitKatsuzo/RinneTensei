@@ -1,0 +1,15 @@
+name = "rinne-tensei-api"
+main = "worker.js"
+compatibility_date = "2026-11-01"
+
+[vars]
+# GitHub Pages のURL（末尾の / は付けない）。複数あるときはカンマ区切り
+ALLOWED_ORIGIN = "https://kitkatsuzo.github.io"
+GEMINI_MODEL = "gemini-3.8-flash"
+
+# 回数制限（任意）。1つのIPから60秒に20回まで。
+# 書き方は Cloudflare の「Rate Limiting」のドキュメントで最新の形を確認してください。
+[[ratelimits]]
+name = "RL"
+namespace_id = "1001"
+simple = { limit = 20, period = 60 }
