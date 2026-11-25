@@ -136,7 +136,7 @@ button.big{min-height:60px;padding:0 44px;font-size:20px;font-family:"Shippori M
         <p class="warn">閻魔さまが見ています。<br>嘘を書いた者は、舌を抜かれます。</p>
         <p class="hint" style="margin-top:0">振り返る期間を選んで、その間のことだけを思い出してください。家族、友だち、学校やバイト先、通りすがりの人。小さなことで大丈夫です。</p>
         <div id="qs"></div>
-        <label for="nm">生前の名前 <small>（任意）</small></label>
+        <label for="nm">生前の名前 <small>（任意。本物の戒名のように、名前から一字いただきます）</small></label>
         <input type="text" id="nm" maxlength="30" autocomplete="off">
         <div class="btns"><button class="main" id="judgeBtn" type="submit">閻魔さまに裁いてもらう</button></div>
         <p class="hint" id="hint"></p>
@@ -247,12 +247,13 @@ async function api(type,payload){
   try{
     const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type,...payload})});
     if(r.status===429) return {error:'rate_limited'};
-    if(!r.ok) return {error:'failed'};
-    const j=await r.json();
-    return j&&j.result?{result:j.result}:{error:'failed'};
-  }catch(e){return {error:'failed'}}
+    const txt=await r.text();let j=null;try{j=JSON.parse(txt)}catch(e){}
+    if(!r.ok||!j) return {error:'failed',detail:`HTTP ${r.status} ${(j&&(j.message||j.error))||txt.slice(0,80)}`};
+    return j.result?{result:j.result}:{error:'failed',detail:'AIの返事を読み取れませんでした'};
+  }catch(e){return {error:'failed',detail:'中継サーバーにつながりません（CORS かURLの問題）'}}
 }
-const whyMsg=e=>e==='rate_limited'?'閻魔さまが混み合っています。少し待ってからもう一度どうぞ。今回は簡易の帳面で判定しました。':'AIの閻魔さまに会えなかったので、簡易の帳面で判定しました。';
+let lastDetail='';
+const whyMsg=e=>e==='rate_limited'?'閻魔さまが混み合っています。少し待ってからもう一度どうぞ。今回は簡易の帳面で判定しました。':'AIの閻魔さまに会えなかったので、簡易の帳面で判定しました。'+(lastDetail?`（原因：${lastDetail}）`:'');
 
 const PER={
  week:{n:'この1週間',f:3,q:[['善','この1週間で、1番よかった行い','例：バイト先で、困っていた新人のシフトを代わった'],['罪','この1週間で、1番よくなかった行い','例：疲れていて、母のLINEを既読無視した'],['両','追加で閻魔さまに申し開くこと（任意）','例：既読無視した母には、次の日に電話した']]},
@@ -369,7 +370,7 @@ $('form').addEventListener('submit',async e=>{
   $('judgeBtn').disabled=true;$('hint').textContent='';
   $('status').textContent='閻魔さまが閻魔帳をめくり、あなたの落ちる先を見定めています…';
   const res=await api('judge',{per,name:nm,items:Q.map((q,i)=>({kind:q[0],label:q[1],text:ans[i]}))});
-  const r=res.result;
+  const r=res.result;lastDetail=res.detail||'';
   let why='';
   const dd=r&&Array.isArray(r.deeds)?r.deeds.filter(d=>d&&Number.isFinite(+d.points)).map(d=>({text:String(d.text||''),points:clamp(Math.round(+d.points),-100,100),tag:String(d.tag||'').trim()})):null;
   if(dd&&dd.length){
