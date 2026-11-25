@@ -17,7 +17,7 @@ export default {
       'Vary': 'Origin',
     };
     if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
-    if (req.method === 'GET') return json({ ok: true, message: '輪廻転生の中継サーバーは動いています', hasKey: !!env.GEMINI_API_KEY, model: env.GEMINI_MODEL || 'gemini-3.8-flash' }, 200, cors);
+    if (req.method === 'GET') return json({ ok: true, message: '輪廻転生の中継サーバーは動いています', hasKey: !!env.GEMINI_API_KEY, model: env.GEMINI_MODEL || 'gemini-3.8-flash', fallback: env.FALLBACK_MODELS || 'gemini-3.6-flash,gemini-2.5-flash' }, 200, cors);
     if (req.method !== 'POST') return json({ error: 'method_not_allowed' }, 405, cors);
     if (!okOrigin) return json({ error: 'forbidden', message: `許可されていないサイトからです（${origin}）。ALLOWED_ORIGIN を確認` }, 403, cors);
 
@@ -40,20 +40,32 @@ export default {
       return json({ error: 'bad_request' }, 400, cors);
     }
 
-    const model = env.GEMINI_MODEL || 'gemini-3.8-flash';
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: { responseMimeType: 'application/json', temperature: 0.7 },
-      }),
-    });
-    if (!r.ok) {
-      let msg = '';
-      try { msg = (await r.json())?.error?.message || ''; } catch {}
-      return json({ error: 'upstream', status: r.status, message: `Gemini ${r.status}: ${msg.slice(0, 160)}` }, 502, cors);
+    // 混雑（503）や一時的なエラーのときは、少し待って再試行し、それでもだめなら別のモデルに切り替える
+    const models = [env.GEMINI_MODEL || 'gemini-3.8-flash',
+      ...(env.FALLBACK_MODELS || 'gemini-3.6-flash,gemini-2.5-flash').split(',').map(s => s.trim()).filter(Boolean)];
+    let r = null, lastErr = '';
+    outer: for (const model of models) {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: { responseMimeType: 'application/json', temperature: 0.7 },
+          }),
+        });
+        if (r.ok) break outer;
+        let msg = '';
+        try { msg = (await r.json())?.error?.message || ''; } catch {}
+        lastErr = `Gemini ${r.status} (${model}): ${msg.slice(0, 140)}`;
+        if (![429, 500, 503].includes(r.status)) {
+          if (r.status === 404) break;          // モデル名が無い → 次のモデルへ
+          return json({ error: 'upstream', status: r.status, message: lastErr }, 502, cors);
+        }
+        await new Promise(res => setTimeout(res, 700 * (attempt + 1)));
+      }
     }
+    if (!r || !r.ok) return json({ error: 'upstream', message: lastErr }, 502, cors);
 
     const data = await r.json();
     const text = (data?.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('');
