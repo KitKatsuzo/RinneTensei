@@ -372,9 +372,10 @@ $('form').addEventListener('submit',async e=>{
   const res=await api('judge',{per,name:nm,items:Q.map((q,i)=>({kind:q[0],label:q[1],text:ans[i]}))});
   const r=res.result;lastDetail=res.detail||'';
   let why='';
-  const dd=r&&Array.isArray(r.deeds)?r.deeds.filter(d=>d&&Number.isFinite(+d.points)).map(d=>({text:String(d.text||''),points:clamp(Math.round(+d.points),-100,100),tag:String(d.tag||'').trim()})):null;
+  const dd=r&&Array.isArray(r.deeds)?r.deeds.filter(d=>d&&Number.isFinite(+d.points)).map(d=>({text:String(d.text||''),points:clamp(Math.round(+d.points),-100,100),tag:String(d.tag||'').trim(),lie:d.lie===true||d.lie==='true'})):null;
   if(dd&&dd.length){
     dd.forEach(d=>d.points=Math.round(d.points*PER[per].f));
+    dd.forEach(d=>{if(d.lie&&d.points>0){d.points=0;d.text+='（嘘と見なし、点数なし）'}});
     const pos=dd.reduce((a,d)=>a+Math.max(0,d.points),0),neg=dd.reduce((a,d)=>a-Math.min(0,d.points),0);
     K={score:clamp(pos-neg,-100,100),sin:clamp(Math.round(neg/6),neg?1:0,10),virtue:clamp(Math.round(pos/6),pos?1:0,10),deeds:dd,verdict:String(r.verdict||''),kaimyo:String(r.kaimyo||''),uso:{level:clamp(Math.round(+(r.uso&&r.uso.level)||0),0,3),reason:String((r.uso&&r.uso.reason)||'')}};
   }else{
