@@ -17,8 +17,9 @@ export default {
       'Vary': 'Origin',
     };
     if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
+    if (req.method === 'GET') return json({ ok: true, message: '輪廻転生の中継サーバーは動いています', hasKey: !!env.GEMINI_API_KEY, model: env.GEMINI_MODEL || 'gemini-3.8-flash' }, 200, cors);
     if (req.method !== 'POST') return json({ error: 'method_not_allowed' }, 405, cors);
-    if (!okOrigin) return json({ error: 'forbidden' }, 403, cors);
+    if (!okOrigin) return json({ error: 'forbidden', message: `許可されていないサイトからです（${origin}）。ALLOWED_ORIGIN を確認` }, 403, cors);
 
     // 回数制限（wrangler.toml で RL を設定したときだけ有効）
     if (env.RL) {
@@ -48,7 +49,11 @@ export default {
         generationConfig: { responseMimeType: 'application/json', temperature: 0.7 },
       }),
     });
-    if (!r.ok) return json({ error: 'upstream', status: r.status }, 502, cors);
+    if (!r.ok) {
+      let msg = '';
+      try { msg = (await r.json())?.error?.message || ''; } catch {}
+      return json({ error: 'upstream', status: r.status, message: `Gemini ${r.status}: ${msg.slice(0, 160)}` }, 502, cors);
+    }
 
     const data = await r.json();
     const text = (data?.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('');
@@ -100,7 +105,7 @@ function judgePrompt(b) {
 - verdict は閻魔大王の口調の日本語で2〜3文。書かれた行いに具体的に触れ、少しユーモアを交える。最後に、まだ生きている本人がこれからできることを一つほのめかす（謝れていない相手がいれば、謝ることなど）。深刻な加害や被害の告白は茶化さず厳粛に。深い苦しみが書かれていれば責めずにいたわる。
 - 各 deed に tag を一つつける。罪なら十悪・五戒のどれに当たるかを次から: 殺生, 偸盗, 邪淫, 妄語, 両舌, 悪口, 綺語, 貪欲, 瞋恚, 邪見, 飲酒。善行なら次から: 布施, 慈悲, 孝養, 忍辱, 精進, 不殺生, 不妄語, 不悪口（例：弟のプリンを食べた→偸盗、陰口→両舌、親を旅行に→孝養、寄付→布施、命を救った・生き物を助けた→不殺生、正直に打ち明けた→不妄語）。
 - verdict の中で、当てはまる戒の名（不偸盗、不妄語など）を一つは使う。
-- kaimyo は戒名風の漢字4〜8字（例：慈光院善行居士）。
+- kaimyo は戒名風の漢字4〜8字（例：慈光院善行居士）。生前の名が書かれていれば、実際の戒名の習わしにならい、その名から漢字を1字取って入れる（ひらがな・カタカナ・ローマ字の名なら、読みに合う漢字を1字当てる）。名がなければ、行いにちなんだ字で作る。
 JSONのみを出力: {"deeds":[{"text":"行いの短い要約","points":0,"tag":""}],"verdict":"","kaimyo":"","uso":{"level":0,"reason":""}}
 
 振り返った期間: ${per}（書かれているのはこの期間の行いだけ。期間の長さは気にせず、基準表どおりに一つずつ採点する）
